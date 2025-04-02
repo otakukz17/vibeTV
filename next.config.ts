@@ -5,7 +5,7 @@ const nextConfig = {
     unoptimized: true,
   },
   // Для GitHub Pages вам нужно указать basePath, если размещаете не в корневом домене
-  // basePath: '/название-вашего-репозитория', // Расскомментируйте и замените на название вашего репозитория
+  basePath: '/vibeTV', // Название вашего репозитория
 };
 
 export default nextConfig;
