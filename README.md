@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IPTV Player
 
-## Getting Started
+Простой IPTV плеер с поддержкой протоколов HLS, построенный на Next.js.
 
-First, run the development server:
+## Функциональность
 
+- Загрузка и парсинг M3U плейлистов
+- Поиск каналов
+- Воспроизведение видеопотоков с поддержкой HLS
+- Адаптивный дизайн
+
+## Технологии
+
+- Next.js 15
+- React 19
+- HLS.js для поддержки потокового видео
+- TailwindCSS для стилизации
+
+## Установка и запуск
+
+1. Клонировать репозиторий
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/ваш-аккаунт/название-репозитория.git
+cd название-репозитория
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Установить зависимости
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Запустить в режиме разработки
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Создать продакшн-сборку
+```bash
+npm run build
+```
 
-## Learn More
+## Деплой на GitHub Pages
 
-To learn more about Next.js, take a look at the following resources:
+Этот проект настроен для автоматического деплоя на GitHub Pages через GitHub Actions.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Шаги для настройки:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Создайте репозиторий на GitHub
+2. Включите GitHub Pages в настройках репозитория
+   - Перейдите в Settings -> Pages
+   - В разделе "Source" выберите "GitHub Actions"
+3. Отредактируйте файл `next.config.ts`, если размещаете на GitHub Pages:
+   - Раскомментируйте и замените строку `basePath` на название вашего репозитория
+4. Залейте код в репозиторий:
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/ваш-аккаунт/название-репозитория.git
+git push -u origin main
+```
 
-## Deploy on Vercel
+После пуша в ветку main GitHub Actions автоматически выполнит сборку и деплой.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Ограничения
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Браузеры имеют ограничения на форматы потокового видео
+- Не все протоколы поддерживаются (RTMP, RTSP могут не работать)
+- Некоторые каналы могут блокировать воспроизведение из-за CORS-ограничений
