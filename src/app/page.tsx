@@ -10,7 +10,7 @@ interface Channel {
 }
 
 const IPTVPlayer: React.FC = () => {
-    const playlistUrl = 'https://iptv-org.github.io/iptv/index.m3u';
+    const playlistUrl = 'https://iptv-org.github.io/iptv/languages/kaz.m3u';
     const [channels, setChannels] = useState<Channel[]>([]);
     const [selectedChannelUrl, setSelectedChannelUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
