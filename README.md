@@ -1,4 +1,4 @@
-# IPTV Player
+# vibeTV - IPTV Player
 
 Простой IPTV плеер с поддержкой протоколов HLS, построенный на Next.js.
 
@@ -20,8 +20,8 @@
 
 1. Клонировать репозиторий
 ```bash
-git clone https://github.com/ваш-аккаунт/название-репозитория.git
-cd название-репозитория
+git clone https://github.com/otakukz17/vibeTV.git
+cd vibeTV
 ```
 
 2. Установить зависимости
@@ -50,14 +50,14 @@ npm run build
    - Перейдите в Settings -> Pages
    - В разделе "Source" выберите "GitHub Actions"
 3. Отредактируйте файл `next.config.ts`, если размещаете на GitHub Pages:
-   - Раскомментируйте и замените строку `basePath` на название вашего репозитория
+   - Укажите строку `basePath` с названием вашего репозитория
 4. Залейте код в репозиторий:
 ```bash
 git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/ваш-аккаунт/название-репозитория.git
+git remote add origin https://github.com/otakukz17/vibeTV.git
 git push -u origin main
 ```
 
