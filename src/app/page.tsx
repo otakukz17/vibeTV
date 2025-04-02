@@ -18,6 +18,26 @@ const IPTVPlayer: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
+    const [useCorsProxy, setUseCorsProxy] = useState<boolean>(true);
+
+    // Функция для добавления CORS-прокси к URL
+    const addCorsProxy = (url: string): string => {
+        if (!useCorsProxy) return url;
+        
+        // Проверка наличия протокола
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            return url; // Возвращаем неизмененным, если нет протокола
+        }
+        
+        // Преобразуем http в https для решения Mixed Content проблемы
+        let secureUrl = url;
+        if (url.startsWith('http://')) {
+            secureUrl = 'https://' + url.substring(7);
+        }
+        
+        // Используем cors-anywhere прокси
+        return `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`;
+    };
 
     const parseM3U = useCallback((m3uContent: string): Channel[] => {
         const lines = m3uContent.split('\n');
@@ -81,10 +101,13 @@ const IPTVPlayer: React.FC = () => {
                 hlsRef.current = null;
             }
             
+            // Применяем CORS прокси к URL
+            const proxyUrl = addCorsProxy(selectedChannelUrl);
+            
             // Функция для воспроизведения видео напрямую
             const playDirectStream = () => {
                 if (videoRef.current) {
-                    videoRef.current.src = selectedChannelUrl;
+                    videoRef.current.src = proxyUrl;
                     videoRef.current.play().catch(e => {
                         console.error('Ошибка воспроизведения напрямую:', e);
                         setError(`Ошибка воспроизведения: ${e.message || 'Неизвестная ошибка'}`);
@@ -93,25 +116,29 @@ const IPTVPlayer: React.FC = () => {
             };
             
             // Проверяем, поддерживается ли HLS.js и подходит ли URL для HLS
-            if (Hls.isSupported() && selectedChannelUrl.includes('.m3u8')) {
+            if (Hls.isSupported() && (proxyUrl.includes('.m3u8') || selectedChannelUrl.includes('.m3u8'))) {
                 try {
                     const hls = new Hls({
                         maxBufferLength: 30,
                         maxMaxBufferLength: 60,
-                        debug: false
+                        xhrSetup: function() {
+                            // Можно добавить дополнительную настройку XHR при необходимости
+                            // например, заголовки для обхода доп. ограничений
+                        }
                     });
                     
                     hls.attachMedia(videoRef.current);
                     hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-                        hls.loadSource(selectedChannelUrl);
+                        hls.loadSource(proxyUrl);
                     });
                     
                     hls.on(Hls.Events.ERROR, (event, data) => {
                         if (data.fatal) {
+                            console.error('HLS Error:', data);
                             switch(data.type) {
                                 case Hls.ErrorTypes.NETWORK_ERROR:
                                     console.error('Сетевая ошибка:', data);
-                                    setError('Ошибка сети: не удалось загрузить поток');
+                                    setError('Ошибка сети: не удалось загрузить поток. Попробуйте другой канал.');
                                     break;
                                 case Hls.ErrorTypes.MEDIA_ERROR:
                                     console.error('Ошибка медиа:', data);
@@ -144,7 +171,7 @@ const IPTVPlayer: React.FC = () => {
                 hlsRef.current = null;
             }
         };
-    }, [selectedChannelUrl]);
+    }, [selectedChannelUrl, useCorsProxy]);
 
     const handleChannelSelect = (url: string) => {
         setSelectedChannelUrl(url);
@@ -152,6 +179,16 @@ const IPTVPlayer: React.FC = () => {
 
     const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
+    };
+
+    const toggleCorsProxy = () => {
+        setUseCorsProxy(!useCorsProxy);
+        if (selectedChannelUrl) {
+            // Перезагружаем текущий канал с новой настройкой
+            const currentUrl = selectedChannelUrl;
+            setSelectedChannelUrl(null);
+            setTimeout(() => setSelectedChannelUrl(currentUrl), 100);
+        }
     };
 
     const filteredChannels = channels.filter(channel =>
@@ -165,6 +202,13 @@ const IPTVPlayer: React.FC = () => {
                     <div className="flex items-center space-x-2">
                         <PlaySquare className="w-6 h-6 text-indigo-400" />
                         <h1 className="text-xl font-bold tracking-tight">Simple IPTV Player</h1>
+                    </div>
+                    <div className="flex items-center">
+                        <button 
+                            onClick={toggleCorsProxy}
+                            className={`px-3 py-1 text-xs rounded-md ${useCorsProxy ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                            CORS Proxy: {useCorsProxy ? 'Вкл' : 'Выкл'}
+                        </button>
                     </div>
                 </div>
             </header>
@@ -207,7 +251,7 @@ const IPTVPlayer: React.FC = () => {
                     </div>
                 </aside>
 
-                <main className="flex-1 bg-black rounded-xl shadow-inner overflow-hidden border border-slate-700 flex items-center justify-center min-h-[300px] lg:min-h-0">
+                <main className="flex-1 bg-black rounded-xl shadow-inner overflow-hidden border border-slate-700 flex items-center justify-center min-h-[300px] lg:min-h-0 relative">
                     {selectedChannelUrl ? (
                         <>
                             <video
@@ -242,7 +286,7 @@ const IPTVPlayer: React.FC = () => {
                     )}
                 </main>
             </div>
-             <footer className="p-4 text-center text-xs text-slate-500 bg-slate-900 bg-opacity-80 border-t border-slate-700">
+            <footer className="p-4 text-center text-xs text-slate-500 bg-slate-900 bg-opacity-80 border-t border-slate-700">
                 Simple IPTV Player - Приятного просмотра!
             </footer>
         </div>
