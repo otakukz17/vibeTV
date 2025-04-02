@@ -19,6 +19,7 @@ const IPTVPlayer: React.FC = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const [useCorsProxy, setUseCorsProxy] = useState<boolean>(true);
+    const [proxyType, setProxyType] = useState<string>('corsproxy');
 
     // Функция для добавления CORS-прокси к URL
     const addCorsProxy = (url: string): string => {
@@ -35,8 +36,18 @@ const IPTVPlayer: React.FC = () => {
             secureUrl = 'https://' + url.substring(7);
         }
         
-        // Используем cors-anywhere прокси
-        return `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`;
+        // Используем выбранный прокси
+        if (proxyType === 'corsproxy') {
+            return `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`;
+        } else if (proxyType === 'corsanywhere') {
+            return `https://cors-anywhere.herokuapp.com/${secureUrl}`;
+        } else if (proxyType === 'allorigins') {
+            return `https://api.allorigins.win/raw?url=${encodeURIComponent(secureUrl)}`;
+        } else if (proxyType === 'thingproxy') {
+            return `https://thingproxy.freeboard.io/fetch/${secureUrl}`;
+        } else {
+            return secureUrl;
+        }
     };
 
     const parseM3U = useCallback((m3uContent: string): Channel[] => {
@@ -121,9 +132,20 @@ const IPTVPlayer: React.FC = () => {
                     const hls = new Hls({
                         maxBufferLength: 30,
                         maxMaxBufferLength: 60,
-                        xhrSetup: function() {
-                            // Можно добавить дополнительную настройку XHR при необходимости
-                            // например, заголовки для обхода доп. ограничений
+                        // Критически важно: настройка для принудительного использования прокси для всех запросов
+                        xhrSetup: function(xhr, url) {
+                            // Проверяем, если URL уже обработан нашим прокси
+                            if (!url.includes('corsproxy.io') && 
+                                !url.includes('cors-anywhere') && 
+                                !url.includes('allorigins.win') && 
+                                !url.includes('thingproxy.freeboard.io') && 
+                                useCorsProxy &&
+                                (url.startsWith('http://') || url.startsWith('https://'))) {
+                                // Применяем прокси к URL сегментов и мастер-плейлистов
+                                const proxiedUrl = addCorsProxy(url);
+                                xhr.open('GET', proxiedUrl, true);
+                                return;
+                            }
                         }
                     });
                     
@@ -138,7 +160,7 @@ const IPTVPlayer: React.FC = () => {
                             switch(data.type) {
                                 case Hls.ErrorTypes.NETWORK_ERROR:
                                     console.error('Сетевая ошибка:', data);
-                                    setError('Ошибка сети: не удалось загрузить поток. Попробуйте другой канал.');
+                                    setError('Ошибка сети: не удалось загрузить поток. Попробуйте другой канал или прокси.');
                                     break;
                                 case Hls.ErrorTypes.MEDIA_ERROR:
                                     console.error('Ошибка медиа:', data);
@@ -171,7 +193,7 @@ const IPTVPlayer: React.FC = () => {
                 hlsRef.current = null;
             }
         };
-    }, [selectedChannelUrl, useCorsProxy]);
+    }, [selectedChannelUrl, useCorsProxy, proxyType]);
 
     const handleChannelSelect = (url: string) => {
         setSelectedChannelUrl(url);
@@ -191,6 +213,32 @@ const IPTVPlayer: React.FC = () => {
         }
     };
 
+    const changeProxyType = () => {
+        // Циклически переключаем между доступными прокси
+        const proxyTypes = ['corsproxy', 'corsanywhere', 'allorigins', 'thingproxy', 'none'];
+        const currentIndex = proxyTypes.indexOf(proxyType);
+        const nextIndex = (currentIndex + 1) % proxyTypes.length;
+        setProxyType(proxyTypes[nextIndex]);
+        
+        if (selectedChannelUrl) {
+            // Перезагружаем текущий канал с новой настройкой
+            const currentUrl = selectedChannelUrl;
+            setSelectedChannelUrl(null);
+            setTimeout(() => setSelectedChannelUrl(currentUrl), 100);
+        }
+    };
+
+    const getProxyName = (type: string): string => {
+        switch(type) {
+            case 'corsproxy': return 'CorsprIO';
+            case 'corsanywhere': return 'CORS Anywhere';
+            case 'allorigins': return 'All Origins';
+            case 'thingproxy': return 'ThingProxy';
+            case 'none': return 'Отключен';
+            default: return type;
+        }
+    };
+
     const filteredChannels = channels.filter(channel =>
         channel.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -203,7 +251,12 @@ const IPTVPlayer: React.FC = () => {
                         <PlaySquare className="w-6 h-6 text-indigo-400" />
                         <h1 className="text-xl font-bold tracking-tight">Simple IPTV Player</h1>
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center space-x-2">
+                        <button 
+                            onClick={changeProxyType}
+                            className={`px-3 py-1 text-xs rounded-md bg-blue-700 hover:bg-blue-800`}>
+                            Прокси: {getProxyName(proxyType)}
+                        </button>
                         <button 
                             onClick={toggleCorsProxy}
                             className={`px-3 py-1 text-xs rounded-md ${useCorsProxy ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
@@ -268,11 +321,18 @@ const IPTVPlayer: React.FC = () => {
                                         <AlertTriangle className="w-8 h-8 mb-2"/>
                                         <h3 className="font-bold">Проблема воспроизведения</h3>
                                         <p>{error}</p>
-                                        <button 
-                                            className="mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
-                                            onClick={() => setError(null)}>
-                                            Закрыть
-                                        </button>
+                                        <div className="flex space-x-2 mt-2">
+                                            <button 
+                                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
+                                                onClick={() => setError(null)}>
+                                                Закрыть
+                                            </button>
+                                            <button 
+                                                className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg transition"
+                                                onClick={changeProxyType}>
+                                                Сменить прокси
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
